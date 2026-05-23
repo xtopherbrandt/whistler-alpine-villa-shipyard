@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(shipyard-data)",
+      "Bash(shipyard-data:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(grep:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx playwright:*)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "deny": []
+  }
+}
