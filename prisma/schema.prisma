@@ -1,0 +1,14 @@
+// Placeholder schema — replaced by T002 (full schema migration)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Stub model - replaced by T002 with full schema
+model Placeholder {
+  id Int @id @default(autoincrement())
+}
