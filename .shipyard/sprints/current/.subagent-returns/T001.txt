@@ -1,5 +1,0 @@
-STATUS: COMPLETE
-TASK_ID: T001
-COMMIT: 60993fb
-BUILD: PASS
-NOTES: Next.js downgraded to 15.x for next-auth@5.0.0-beta.28 compatibility. Prisma pinned to 6.x (Node 20.12 does not support Prisma 7). Stub prisma/schema.prisma created for T002 to replace. @react-email/components deprecated warnings noted but functional.
