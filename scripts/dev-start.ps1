@@ -8,21 +8,19 @@ function Write-Step($msg) { Write-Host "`n>> $msg" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "   OK  $msg" -ForegroundColor Green }
 function Write-Fail($msg) { Write-Host "   ERR $msg" -ForegroundColor Red }
 
-# 1. Check .env file exists (Prisma needs DATABASE_URL)
+# 1. Check .env file exists (Prisma needs DATABASE_URL + seed vars)
 Write-Step "Checking environment"
-if (-not (Test-Path ".env")) {
-    Write-Host ""
-    Write-Host "  .env not found. Creating it with the local DB URL..." -ForegroundColor Yellow
-    Add-Content -Path ".env" -Value 'DATABASE_URL="postgresql://whistler:whistler@localhost:5432/whistler_alpine_villa"'
-    Write-Ok ".env created"
-} else {
-    Write-Ok ".env present"
-}
-
 if (-not (Test-Path ".env.local")) {
     Write-Fail ".env.local not found — copy .env.local.example and fill in AUTH_SECRET and RESEND_API_KEY"
     exit 1
 }
+
+# Read SEED_ vars from .env.local and write them to .env so Prisma CLI can see them
+$envLocalContent = Get-Content ".env.local" -ErrorAction SilentlyContinue
+$seedVars = $envLocalContent | Where-Object { $_ -match '^SEED_' -or $_ -match '^DATABASE_URL' }
+
+Set-Content -Path ".env" -Value ($seedVars -join "`n")
+Write-Ok ".env synced from .env.local (DATABASE_URL + SEED_ vars)"
 
 # 2. Check Docker is running
 Write-Step "Starting database (Docker)"
