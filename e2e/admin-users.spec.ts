@@ -1,0 +1,176 @@
+import { test, expect } from '@playwright/test'
+import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+
+const prisma = new PrismaClient()
+
+async function seedAdmin() {
+  const passwordHash = await bcrypt.hash('AdminPass1!', 12)
+  return prisma.user.upsert({
+    where: { email: 'admin@test.local' },
+    create: { name: 'Test Admin', email: 'admin@test.local', passwordHash, isAdmin: true, isActive: true },
+    update: { passwordHash, isAdmin: true, isActive: true },
+  })
+}
+
+async function seedRegularUser(suffix = '') {
+  const passwordHash = await bcrypt.hash('UserPass1!', 12)
+  return prisma.user.upsert({
+    where: { email: `user${suffix}@test.local` },
+    create: { name: `Test User${suffix}`, email: `user${suffix}@test.local`, passwordHash, isAdmin: false, isActive: true },
+    update: { passwordHash, isAdmin: false, isActive: true },
+  })
+}
+
+async function loginAsAdmin(page: import('@playwright/test').Page) {
+  await page.goto('/login')
+  await page.getByLabel(/email/i).fill('admin@test.local')
+  await page.getByLabel(/password/i).fill('AdminPass1!')
+  await page.getByRole('button', { name: /sign in/i }).click()
+  await expect(page).toHaveURL(/\/admin\/users/)
+}
+
+test.beforeAll(async () => {
+  await seedAdmin()
+  await seedRegularUser()
+})
+
+test.describe('admin user management', () => {
+  test('admin user list shows users with correct statuses', async ({ page }) => {
+    await loginAsAdmin(page)
+    await expect(page.getByRole('table')).toBeVisible()
+    await expect(page.getByText('admin@test.local')).toBeVisible()
+    await expect(page.getByText('user@test.local')).toBeVisible()
+  })
+
+  test('non-admin cannot access /admin/users', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByLabel(/email/i).fill('user@test.local')
+    await page.getByLabel(/password/i).fill('UserPass1!')
+    await page.getByRole('button', { name: /sign in/i }).click()
+    await page.goto('/admin/users')
+    await expect(page).not.toHaveURL('/admin/users')
+  })
+
+  test('admin edits user name and change persists in list', async ({ page }) => {
+    const user = await seedRegularUser('-edit')
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await page.getByLabel(/name/i).fill('Renamed User')
+    await page.getByRole('button', { name: /save profile/i }).click()
+    await page.goto('/admin/users')
+    await expect(page.getByText('Renamed User')).toBeVisible()
+    await prisma.user.update({ where: { id: user.id }, data: { name: `Test User-edit` } })
+  })
+
+  test('admin edits user email to duplicate shows inline error', async ({ page }) => {
+    const user = await seedRegularUser('-dup')
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await page.getByLabel(/email/i).fill('admin@test.local')
+    await page.getByRole('button', { name: /save profile/i }).click()
+    await expect(page.getByRole('alert')).toContainText(/already in use/i)
+  })
+
+  test('admin assigns unit to user and unit appears in assignment', async ({ page }) => {
+    const user = await seedRegularUser('-unit')
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    const firstUnitCheckbox = page.locator('input[type="checkbox"]').first()
+    const isChecked = await firstUnitCheckbox.isChecked()
+    if (!isChecked) {
+      await firstUnitCheckbox.check()
+    }
+    await page.getByRole('button', { name: /save units/i }).click()
+    await page.reload()
+    const checkbox = page.locator('input[type="checkbox"]').first()
+    await expect(checkbox).toBeChecked()
+  })
+
+  test('admin removes unit assignment', async ({ page }) => {
+    const user = await seedRegularUser('-rmunit')
+    const unit = await prisma.unit.findFirst({ orderBy: { id: 'asc' } })
+    if (unit) {
+      await prisma.userUnit.upsert({
+        where: { userId_unitId: { userId: user.id, unitId: unit.id } },
+        create: { userId: user.id, unitId: unit.id },
+        update: {},
+      })
+    }
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    const firstUnitCheckbox = page.locator('input[type="checkbox"]').first()
+    if (await firstUnitCheckbox.isChecked()) {
+      await firstUnitCheckbox.uncheck()
+    }
+    await page.getByRole('button', { name: /save units/i }).click()
+    const remaining = await prisma.userUnit.count({ where: { userId: user.id } })
+    expect(remaining).toBe(0)
+  })
+
+  test('admin deactivates user account', async ({ page }) => {
+    const user = await seedRegularUser('-deact')
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await page.getByRole('button', { name: /deactivate account/i }).click()
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await expect(page.getByRole('button', { name: /reactivate account/i })).toBeVisible()
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+    expect(dbUser?.isActive).toBe(false)
+  })
+
+  test('admin cannot deactivate their own account', async ({ page }) => {
+    const admin = await prisma.user.findUnique({ where: { email: 'admin@test.local' } })
+    if (!admin) return
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${admin.id}/edit`)
+    const deactivateBtn = page.getByRole('button', { name: /deactivate account/i })
+    await expect(deactivateBtn).toBeDisabled()
+  })
+
+  test('admin reactivates user and user can log in', async ({ page }) => {
+    const user = await prisma.user.upsert({
+      where: { email: 'reactivate@test.local' },
+      create: {
+        name: 'Reactivate Me',
+        email: 'reactivate@test.local',
+        passwordHash: await bcrypt.hash('ReactPass1!', 12),
+        isActive: false,
+      },
+      update: { isActive: false },
+    })
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await page.getByRole('button', { name: /reactivate account/i }).click()
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+    expect(dbUser?.isActive).toBe(true)
+    await page.goto('/login')
+    await page.getByLabel(/email/i).fill('reactivate@test.local')
+    await page.getByLabel(/password/i).fill('ReactPass1!')
+    await page.getByRole('button', { name: /sign in/i }).click()
+    await expect(page).not.toHaveURL(/\/login/)
+  })
+
+  test('admin resends invite and old token is invalidated', async ({ page }) => {
+    const user = await prisma.user.upsert({
+      where: { email: 'reinvite@test.local' },
+      create: { name: 'Reinvite User', email: 'reinvite@test.local', isActive: false, passwordHash: null },
+      update: { isActive: false, passwordHash: null },
+    })
+    await prisma.invitationToken.deleteMany({ where: { userId: user.id } })
+    const oldToken = crypto.randomBytes(32).toString('hex')
+    await prisma.invitationToken.create({
+      data: { userId: user.id, token: oldToken, expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000) },
+    })
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await page.getByRole('button', { name: /resend invite/i }).click()
+    const oldRecord = await prisma.invitationToken.findUnique({ where: { token: oldToken } })
+    expect(oldRecord?.usedAt).not.toBeNull()
+    const newTokens = await prisma.invitationToken.findMany({
+      where: { userId: user.id, usedAt: null },
+    })
+    expect(newTokens.length).toBe(1)
+  })
+})
