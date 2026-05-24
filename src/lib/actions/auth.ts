@@ -1,7 +1,7 @@
 'use server'
 
 import { AuthError } from 'next-auth'
-import { signIn } from '~/auth'
+import { signIn, signOut } from '~/auth'
 import { db } from '@/lib/db'
 import type { ActionResult } from '@/lib/types'
 
@@ -49,4 +49,8 @@ export async function loginAction(
     // Re-throw NEXT_REDIRECT and any other errors
     throw e
   }
+}
+
+export async function logoutAction(): Promise<void> {
+  await signOut({ redirectTo: '/login' })
 }
