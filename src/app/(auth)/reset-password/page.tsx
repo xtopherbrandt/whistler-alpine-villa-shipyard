@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { ResetPasswordForm } from './reset-password-form'
 
 interface Props {
@@ -15,6 +16,9 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
           <p className="text-gray-500 text-sm">
             This reset link is invalid. Please request a new one.
           </p>
+          <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+            Request a new reset link
+          </Link>
         </div>
       </div>
     )

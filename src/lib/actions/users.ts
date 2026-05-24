@@ -69,7 +69,8 @@ export async function createUser(data: CreateUserInput): Promise<ActionResult<Us
       react: InviteEmail({ recipientName: data.name, activationUrl }),
     })
   } catch (emailError) {
-    console.error('[createUser] invite email failed — user created, invite must be resent:', emailError)
+    console.error('[createUser] invite email failed:', emailError)
+    return { data: null, error: 'Account created but invite email failed to send. Use "Resend invite" from the user list.' }
   }
 
   return { data: user.user, error: null }

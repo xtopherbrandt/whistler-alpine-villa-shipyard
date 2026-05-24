@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState } from 'react'
 import { resetPasswordAction } from '@/lib/actions/reset'
 
@@ -21,9 +22,14 @@ export function ResetPasswordForm({ token }: Props) {
 
         <form action={action} className="space-y-4">
           {state?.error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
-              {state.error}
-            </p>
+            <div className="space-y-1">
+              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+                {state.error}
+              </p>
+              <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                Request a new reset link
+              </Link>
+            </div>
           )}
 
           <div className="space-y-1">

@@ -117,14 +117,14 @@ describe('createUser', () => {
     expect(mockSendEmail).toHaveBeenCalledOnce()
   })
 
-  it('returns success even when invite email fails', async () => {
+  it('returns error when invite email fails', async () => {
     mockFindUnique.mockResolvedValue(null)
     const tx = makeTx()
     mockTransaction.mockImplementation(async (callback) => callback(tx))
     mockSendEmail.mockRejectedValue(new Error('SMTP failure'))
     const result = await createUser(createInput)
-    expect(result.data).toMatchObject({ id: 'user-123' })
-    expect(result.error).toBeNull()
+    expect(result.data).toBeNull()
+    expect(result.error).toContain('invite email failed to send')
   })
 })
 
