@@ -8,7 +8,10 @@ import type { ActionResult } from '@/lib/types'
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
 const RATE_LIMIT_MAX_ATTEMPTS = 5
 
-export async function loginAction(formData: FormData): Promise<ActionResult<void>> {
+export async function loginAction(
+  _prevState: ActionResult<void> | null,
+  formData: FormData,
+): Promise<ActionResult<void>> {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 

@@ -51,7 +51,7 @@ describe('loginAction', () => {
 
   it('returns lockout error after 5 failed attempts', async () => {
     mockCount.mockResolvedValue(5)
-    const result = await loginAction(makeFormData('user@test.com', 'pass'))
+    const result = await loginAction(null, makeFormData('user@test.com', 'pass'))
     expect(result).toEqual({ data: null, error: 'Too many failed attempts. Try again in 15 minutes.' })
     expect(mockSignIn).not.toHaveBeenCalled()
   })
@@ -59,7 +59,7 @@ describe('loginAction', () => {
   it('records failed attempt and returns generic error on wrong credentials', async () => {
     mockCount.mockResolvedValue(0)
     mockSignIn.mockRejectedValue(new AuthError('CredentialsSignin'))
-    const result = await loginAction(makeFormData('user@test.com', 'wrong'))
+    const result = await loginAction(null, makeFormData('user@test.com', 'wrong'))
     expect(result).toEqual({ data: null, error: 'Invalid email or password.' })
     expect(mockCreate).toHaveBeenCalledWith({ data: { email: 'user@test.com', success: false } })
   })
@@ -68,7 +68,7 @@ describe('loginAction', () => {
     mockCount.mockResolvedValue(0)
     const redirect = Object.assign(new Error('NEXT_REDIRECT'), { digest: 'NEXT_REDIRECT' })
     mockSignIn.mockRejectedValue(redirect)
-    await expect(loginAction(makeFormData('user@test.com', 'correct'))).rejects.toThrow('NEXT_REDIRECT')
+    await expect(loginAction(null, makeFormData('user@test.com', 'correct'))).rejects.toThrow('NEXT_REDIRECT')
   })
 
   it('redirects admin users to /admin/users', async () => {
@@ -76,7 +76,7 @@ describe('loginAction', () => {
     mockFindUnique.mockResolvedValue({ isAdmin: true } as never)
     const redirect = Object.assign(new Error('NEXT_REDIRECT'), { digest: 'NEXT_REDIRECT' })
     mockSignIn.mockRejectedValue(redirect)
-    await expect(loginAction(makeFormData('admin@test.com', 'pass'))).rejects.toThrow()
+    await expect(loginAction(null, makeFormData('admin@test.com', 'pass'))).rejects.toThrow()
     expect(mockSignIn).toHaveBeenCalledWith('credentials', {
       email: 'admin@test.com',
       password: 'pass',
