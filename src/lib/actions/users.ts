@@ -3,6 +3,7 @@
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
+import { auth } from '~/auth'
 import { db } from '@/lib/db'
 import { sendEmail } from '@/lib/email/send'
 import { InviteEmail } from '@/lib/email/InviteEmail'
@@ -136,4 +137,67 @@ export async function updateUser(id: string, data: UpdateUserInput): Promise<Act
   })
 
   return { data: updated, error: null }
+}
+
+export async function deactivateUser(id: string): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (session?.user?.id === id) {
+    return { data: null, error: 'You cannot deactivate your own account.' }
+  }
+
+  await db.$transaction([
+    db.user.update({ where: { id }, data: { isActive: false } }),
+    db.session.deleteMany({ where: { userId: id } }),
+  ])
+
+  return { data: undefined, error: null }
+}
+
+export async function reactivateUser(id: string): Promise<ActionResult<void>> {
+  await db.user.update({ where: { id }, data: { isActive: true } })
+  return { data: undefined, error: null }
+}
+
+export async function resendInvite(userId: string): Promise<ActionResult<void>> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { isActive: true, name: true, email: true },
+  })
+
+  if (!user) return { data: null, error: 'User not found.' }
+  if (user.isActive) return { data: null, error: 'This user is already active.' }
+
+  await db.invitationToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } })
+
+  const newToken = await createInviteToken(userId)
+  const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${newToken.token}`
+
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Your invitation to Whistler Alpine Villa',
+      react: InviteEmail({ recipientName: user.name, activationUrl }),
+    })
+  } catch (emailError) {
+    console.error('[resendInvite] email failed:', emailError)
+  }
+
+  return { data: undefined, error: null }
+}
+
+export async function createUserFormAction(
+  _prevState: ActionResult<User> | null,
+  formData: FormData,
+): Promise<ActionResult<User>> {
+  const unitIds = (formData.getAll('unitIds') as string[]).map(Number).filter((n) => !isNaN(n))
+  const result = await createUser({
+    name: formData.get('name') as string,
+    email: formData.get('email') as string,
+    isAdmin: formData.get('isAdmin') === 'on',
+    isDirector: formData.get('isDirector') === 'on',
+    isCaretaker: formData.get('isCaretaker') === 'on',
+    unitIds,
+  })
+  if (result.error) return result
+  redirect('/admin/users')
 }
