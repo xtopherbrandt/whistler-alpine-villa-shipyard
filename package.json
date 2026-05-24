@@ -23,6 +23,9 @@
     "react-dom": "19.2.4",
     "resend": "^6.12.3"
   },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
@@ -35,6 +38,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5",
     "vitest": "^3.2.4"
   }
