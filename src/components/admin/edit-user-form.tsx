@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useActionState } from 'react'
+import { useRouter } from 'next/navigation'
 import { updateProfileFormAction, updateUnitsFormAction, deactivateUser, reactivateUser } from '@/lib/actions/admin-users'
 import { resendInvite } from '@/lib/actions/users'
 import type { Unit, User } from '@prisma/client'
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function EditUserForm({ user, allUnits, currentUnitIds, isInvited, isSelf }: Props) {
+  const router = useRouter()
   const [selectedUnits, setSelectedUnits] = useState<number[]>(currentUnitIds)
   const updateBound = updateProfileFormAction.bind(null, user.id)
   const deactivateBound = deactivateUser.bind(null, user.id)
@@ -27,6 +29,16 @@ export function EditUserForm({ user, allUnits, currentUnitIds, isInvited, isSelf
   const [, reactivateAction] = useActionState(reactivateBound, null)
   const [unitsState, unitsAction] = useActionState(updateUnitsBound, null)
   const [, resendAction] = useActionState(resendBound, null)
+
+  // Refresh server component after profile save so role checkboxes reflect the new DB state
+  useEffect(() => {
+    if (profileState?.data) router.refresh()
+  }, [profileState, router])
+
+  // Sync unit selection state when server data refreshes
+  useEffect(() => {
+    setSelectedUnits(currentUnitIds)
+  }, [currentUnitIds])
 
   return (
     <div className="space-y-8">
