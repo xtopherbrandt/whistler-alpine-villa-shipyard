@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:setup": "docker-compose up -d && npx prisma migrate dev && npx prisma db seed",
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
