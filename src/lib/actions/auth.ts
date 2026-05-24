@@ -5,7 +5,7 @@ import { signIn, signOut } from '~/auth'
 import { db } from '@/lib/db'
 import type { ActionResult } from '@/lib/types'
 
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
 const RATE_LIMIT_MAX_ATTEMPTS = 5
 
 export async function loginAction(

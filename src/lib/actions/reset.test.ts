@@ -60,6 +60,14 @@ describe('forgotPasswordAction', () => {
     expect(mockSendEmail).not.toHaveBeenCalled()
   })
 
+  it('returns error when sendEmail fails for registered email', async () => {
+    mockUserFindUnique.mockResolvedValue({ id: 'user-1', name: 'Alice', email: 'alice@test.com' } as never)
+    mockSendEmail.mockRejectedValue(new Error('SMTP failure'))
+    const result = await forgotPasswordAction(null, makeFormData({ email: 'alice@test.com' }))
+    expect(result.error).toContain('Failed to send reset email')
+    expect(result.data).toBeNull()
+  })
+
   it('creates a reset token and calls sendEmail for registered email', async () => {
     mockUserFindUnique.mockResolvedValue({ id: 'user-1', name: 'Alice', email: 'alice@test.com' } as never)
     const result = await forgotPasswordAction(null, makeFormData({ email: 'alice@test.com' }))

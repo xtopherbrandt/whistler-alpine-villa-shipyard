@@ -35,11 +35,16 @@ export async function forgotPasswordAction(
 
   const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`
 
-  await sendEmail({
-    to: email,
-    subject: 'Reset your password — Whistler Alpine Villa',
-    react: PasswordResetEmail({ resetUrl, name: user.name }),
-  })
+  try {
+    await sendEmail({
+      to: email,
+      subject: 'Reset your password — Whistler Alpine Villa',
+      react: PasswordResetEmail({ resetUrl, name: user.name }),
+    })
+  } catch (emailError) {
+    console.error('[forgotPassword] email failed:', emailError)
+    return { data: null, error: 'Failed to send reset email. Please try again.' }
+  }
 
   return { data: SUCCESS_MESSAGE, error: null }
 }
