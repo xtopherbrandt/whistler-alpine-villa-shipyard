@@ -32,6 +32,7 @@ vi.mock('~/auth', () => ({
   auth: vi.fn(),
 }))
 
+
 vi.mock('bcryptjs', () => ({
   default: { hash: vi.fn().mockResolvedValue('hashed-pw') },
 }))
@@ -40,15 +41,10 @@ import { db } from '@/lib/db'
 import { sendEmail } from '@/lib/email/send'
 import { redirect } from 'next/navigation'
 import { auth } from '~/auth'
-import {
-  createUser,
-  activateAccount,
-  updateUser,
-  deactivateUser,
-  reactivateUser,
-  resendInvite,
-} from '@/lib/actions/users'
-import type { CreateUserInput, UpdateUserInput } from '@/lib/actions/users'
+import { createUser, activateAccount, resendInvite } from '@/lib/actions/users'
+import { updateUser, deactivateUser, reactivateUser } from '@/lib/actions/admin-users'
+import type { CreateUserInput } from '@/lib/actions/users'
+import type { UpdateUserInput } from '@/lib/actions/admin-users'
 
 const mockFindUnique = vi.mocked(db.user.findUnique)
 const mockFindFirst = vi.mocked(db.user.findFirst)

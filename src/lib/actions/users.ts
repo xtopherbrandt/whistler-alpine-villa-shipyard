@@ -3,12 +3,11 @@
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
-import { auth } from '~/auth'
 import { db } from '@/lib/db'
 import { sendEmail } from '@/lib/email/send'
 import { InviteEmail } from '@/lib/email/InviteEmail'
 import type { ActionResult } from '@/lib/types'
-import type { User, InvitationToken } from '@prisma/client'
+import type { InvitationToken, User } from '@prisma/client'
 
 const INVITE_EXPIRY_HOURS = 72
 
@@ -107,55 +106,6 @@ export async function activateAccount(
   ])
 
   redirect('/login?message=Account+activated.+Please+log+in.')
-}
-
-export interface UpdateUserInput {
-  name: string
-  email: string
-  isAdmin: boolean
-  isDirector: boolean
-  isCaretaker: boolean
-}
-
-export async function updateUser(id: string, data: UpdateUserInput): Promise<ActionResult<User>> {
-  const conflicting = await db.user.findFirst({
-    where: { email: data.email, id: { not: id } },
-  })
-  if (conflicting) {
-    return { data: null, error: 'That email address is already in use.' }
-  }
-
-  const updated = await db.user.update({
-    where: { id },
-    data: {
-      name: data.name,
-      email: data.email,
-      isAdmin: data.isAdmin,
-      isDirector: data.isDirector,
-      isCaretaker: data.isCaretaker,
-    },
-  })
-
-  return { data: updated, error: null }
-}
-
-export async function deactivateUser(id: string): Promise<ActionResult<void>> {
-  const session = await auth()
-  if (session?.user?.id === id) {
-    return { data: null, error: 'You cannot deactivate your own account.' }
-  }
-
-  await db.$transaction([
-    db.user.update({ where: { id }, data: { isActive: false } }),
-    db.session.deleteMany({ where: { userId: id } }),
-  ])
-
-  return { data: undefined, error: null }
-}
-
-export async function reactivateUser(id: string): Promise<ActionResult<void>> {
-  await db.user.update({ where: { id }, data: { isActive: true } })
-  return { data: undefined, error: null }
 }
 
 export async function resendInvite(userId: string): Promise<ActionResult<void>> {
