@@ -8,7 +8,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(db) as any,
   session: {
-    strategy: 'database',
+    // Credentials provider requires JWT — database sessions are incompatible with Credentials
+    strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   providers: [
@@ -44,12 +45,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    session({ session, user }) {
-      session.user.id = user.id
-      session.user.isAdmin = user.isAdmin
-      session.user.isDirector = user.isDirector
-      session.user.isCaretaker = user.isCaretaker
-      session.user.isActive = user.isActive
+    jwt({ token, user }) {
+      if (user?.id) {
+        token.id = user.id
+        token.isAdmin = user.isAdmin
+        token.isDirector = user.isDirector
+        token.isCaretaker = user.isCaretaker
+        token.isActive = user.isActive
+      }
+      return token
+    },
+    session({ session, token }) {
+      session.user.id = token.id
+      session.user.isAdmin = token.isAdmin
+      session.user.isDirector = token.isDirector
+      session.user.isCaretaker = token.isCaretaker
+      session.user.isActive = token.isActive
       return session
     },
   },
