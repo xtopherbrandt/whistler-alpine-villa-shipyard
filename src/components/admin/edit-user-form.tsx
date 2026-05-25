@@ -35,6 +35,10 @@ export function EditUserForm({ user, allUnits, currentUnitIds, isInvited, isSelf
     if (profileState?.data) router.refresh()
   }, [profileState, router])
 
+  useEffect(() => {
+    if (unitsState?.data) router.refresh()
+  }, [unitsState, router])
+
   // Sync unit selection state when server data refreshes
   useEffect(() => {
     setSelectedUnits(currentUnitIds)
@@ -88,9 +92,18 @@ export function EditUserForm({ user, allUnits, currentUnitIds, isInvited, isSelf
               Deactivate account
             </button>
           </form>
+        ) : isInvited ? (
+          <form action={deactivateAction}>
+            <button type="submit"
+              className="rounded-md border border-orange-300 px-4 py-2 text-sm text-orange-600 hover:bg-orange-50">
+              Cancel invite
+            </button>
+          </form>
         ) : (
           <form action={reactivateAction}>
-            <button type="submit" className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50">Reactivate account</button>
+            <button type="submit" className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50">
+              Reactivate account
+            </button>
           </form>
         )}
         {isInvited && (
