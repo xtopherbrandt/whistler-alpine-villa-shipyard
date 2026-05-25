@@ -8,7 +8,7 @@ import { resendInvite } from '@/lib/actions/users'
 import type { Unit, User } from '@prisma/client'
 
 interface Props {
-  user: Pick<User, 'id' | 'name' | 'email' | 'isAdmin' | 'isDirector' | 'isCaretaker' | 'isActive'>
+  user: Pick<User, 'id' | 'name' | 'email' | 'isAdmin' | 'isShareholder' | 'isDirector' | 'isCaretaker' | 'isActive'>
   allUnits: Unit[]
   currentUnitIds: number[]
   isInvited: boolean
@@ -55,9 +55,10 @@ export function EditUserForm({ user, allUnits, currentUnitIds, isInvited, isSelf
           <legend className="text-sm font-medium">
             Roles <span className="font-normal text-gray-400">(take effect on next page load)</span>
           </legend>
-          <Checkbox name="isAdmin" label="Admin" defaultChecked={user.isAdmin} />
-          <Checkbox name="isDirector" label="Director" defaultChecked={user.isDirector} />
-          <Checkbox name="isCaretaker" label="Caretaker" defaultChecked={user.isCaretaker} />
+          <Checkbox name="isAdmin"       label="Admin"       defaultChecked={user.isAdmin} />
+          <Checkbox name="isDirector"    label="Director"    defaultChecked={user.isDirector} />
+          <Checkbox name="isShareholder" label="Shareholder" defaultChecked={user.isShareholder} />
+          <Checkbox name="isCaretaker"   label="Caretaker"   defaultChecked={user.isCaretaker} />
         </fieldset>
         <button type="submit" disabled={profilePending}
           className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800 disabled:opacity-50">

@@ -55,9 +55,10 @@ export default async function AdminUsersPage() {
         <tbody>
           {users.map((user) => {
             const roles = [
-              user.isAdmin && 'Admin',
-              user.isDirector && 'Director',
-              user.isCaretaker && 'Caretaker',
+              user.isAdmin       && 'Admin',
+              user.isDirector    && 'Director',
+              user.isShareholder && 'Shareholder',
+              user.isCaretaker   && 'Caretaker',
             ].filter(Boolean).join(', ')
             const units = user.units.map((u) => u.unitId).sort((a, b) => a - b).join(', ')
             const status = deriveStatus(user, now)
