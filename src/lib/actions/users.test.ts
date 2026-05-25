@@ -160,7 +160,7 @@ describe('activateAccount', () => {
 describe('updateUser', () => {
   const updateInput: UpdateUserInput = {
     name: 'Alice Updated', email: 'alice@test.com',
-    isAdmin: true, isDirector: false, isCaretaker: false,
+    isAdmin: true, isDirector: false, isShareholder: false, isCaretaker: false,
   }
 
   beforeEach(() => {
