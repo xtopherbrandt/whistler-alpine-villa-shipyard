@@ -7,6 +7,7 @@ declare module 'next-auth' {
       id: string
       isAdmin: boolean
       isDirector: boolean
+      isShareholder: boolean
       isCaretaker: boolean
       isActive: boolean
     } & DefaultSession['user']
@@ -15,6 +16,7 @@ declare module 'next-auth' {
   interface User extends DefaultUser {
     isAdmin: boolean
     isDirector: boolean
+    isShareholder: boolean
     isCaretaker: boolean
     isActive: boolean
   }
@@ -25,6 +27,7 @@ declare module 'next-auth/jwt' {
     id: string
     isAdmin: boolean
     isDirector: boolean
+    isShareholder: boolean
     isCaretaker: boolean
     isActive: boolean
   }

@@ -38,6 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           isAdmin: user.isAdmin,
           isDirector: user.isDirector,
+          isShareholder: user.isShareholder,
           isCaretaker: user.isCaretaker,
           isActive: user.isActive,
         }
@@ -50,6 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id
         token.isAdmin = user.isAdmin
         token.isDirector = user.isDirector
+        token.isShareholder = user.isShareholder
         token.isCaretaker = user.isCaretaker
         token.isActive = user.isActive
       }
@@ -59,6 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = token.id
       session.user.isAdmin = token.isAdmin
       session.user.isDirector = token.isDirector
+      session.user.isShareholder = token.isShareholder
       session.user.isCaretaker = token.isCaretaker
       session.user.isActive = token.isActive
       return session

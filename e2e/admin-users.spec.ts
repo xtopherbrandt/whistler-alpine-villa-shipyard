@@ -1,35 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
-
-const prisma = new PrismaClient()
-
-async function seedAdmin() {
-  const passwordHash = await bcrypt.hash('AdminPass1!', 12)
-  return prisma.user.upsert({
-    where: { email: 'admin@test.local' },
-    create: { name: 'Test Admin', email: 'admin@test.local', passwordHash, isAdmin: true, isActive: true },
-    update: { passwordHash, isAdmin: true, isActive: true },
-  })
-}
-
-async function seedRegularUser(suffix = '') {
-  const passwordHash = await bcrypt.hash('UserPass1!', 12)
-  return prisma.user.upsert({
-    where: { email: `user${suffix}@test.local` },
-    create: { name: `Test User${suffix}`, email: `user${suffix}@test.local`, passwordHash, isAdmin: false, isActive: true },
-    update: { passwordHash, isAdmin: false, isActive: true },
-  })
-}
-
-async function loginAsAdmin(page: import('@playwright/test').Page) {
-  await page.goto('/login')
-  await page.getByLabel(/email/i).fill('admin@test.local')
-  await page.getByLabel(/password/i).fill('AdminPass1!')
-  await page.getByRole('button', { name: /sign in/i }).click()
-  await expect(page).toHaveURL(/\/admin\/users/)
-}
+import { prisma, seedAdmin, seedRegularUser, loginAsAdmin } from './helpers'
 
 test.beforeAll(async () => {
   await seedAdmin()
@@ -77,36 +49,23 @@ test.describe('admin user management', () => {
     const user = await seedRegularUser('-unit')
     await loginAsAdmin(page)
     await page.goto(`/admin/users/${user.id}/edit`)
-    const firstUnitCheckbox = page.locator('input[type="checkbox"]').first()
-    const isChecked = await firstUnitCheckbox.isChecked()
-    if (!isChecked) {
-      await firstUnitCheckbox.check()
-    }
+    const cb = page.locator('input[type="checkbox"]').first()
+    if (!await cb.isChecked()) await cb.check()
     await page.getByRole('button', { name: /save units/i }).click()
     await page.reload()
-    const checkbox = page.locator('input[type="checkbox"]').first()
-    await expect(checkbox).toBeChecked()
+    await expect(page.locator('input[type="checkbox"]').first()).toBeChecked()
   })
 
   test('admin removes unit assignment', async ({ page }) => {
     const user = await seedRegularUser('-rmunit')
     const unit = await prisma.unit.findFirst({ orderBy: { id: 'asc' } })
-    if (unit) {
-      await prisma.userUnit.upsert({
-        where: { userId_unitId: { userId: user.id, unitId: unit.id } },
-        create: { userId: user.id, unitId: unit.id },
-        update: {},
-      })
-    }
+    if (unit) await prisma.userUnit.upsert({ where: { userId_unitId: { userId: user.id, unitId: unit.id } }, create: { userId: user.id, unitId: unit.id }, update: {} })
     await loginAsAdmin(page)
     await page.goto(`/admin/users/${user.id}/edit`)
-    const firstUnitCheckbox = page.locator('input[type="checkbox"]').first()
-    if (await firstUnitCheckbox.isChecked()) {
-      await firstUnitCheckbox.uncheck()
-    }
+    const cb = page.locator('input[type="checkbox"]').first()
+    if (await cb.isChecked()) await cb.uncheck()
     await page.getByRole('button', { name: /save units/i }).click()
-    const remaining = await prisma.userUnit.count({ where: { userId: user.id } })
-    expect(remaining).toBe(0)
+    expect(await prisma.userUnit.count({ where: { userId: user.id } })).toBe(0)
   })
 
   test('admin deactivates user account', async ({ page }) => {
@@ -125,8 +84,7 @@ test.describe('admin user management', () => {
     if (!admin) return
     await loginAsAdmin(page)
     await page.goto(`/admin/users/${admin.id}/edit`)
-    const deactivateBtn = page.getByRole('button', { name: /deactivate account/i })
-    await expect(deactivateBtn).toBeDisabled()
+    await expect(page.getByRole('button', { name: /deactivate account/i })).toBeDisabled()
   })
 
   test('admin reactivates user and user can log in', async ({ page }) => {
@@ -168,9 +126,70 @@ test.describe('admin user management', () => {
     await page.getByRole('button', { name: /resend invite/i }).click()
     const oldRecord = await prisma.invitationToken.findUnique({ where: { token: oldToken } })
     expect(oldRecord?.usedAt).not.toBeNull()
-    const newTokens = await prisma.invitationToken.findMany({
-      where: { userId: user.id, usedAt: null },
-    })
+    const newTokens = await prisma.invitationToken.findMany({ where: { userId: user.id, usedAt: null } })
     expect(newTokens.length).toBe(1)
+  })
+
+  test('enabling Shareholder with no units shows validation error', async ({ page }) => {
+    const user = await seedRegularUser('-shareholder-no-units')
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await page.getByRole('checkbox', { name: 'Shareholder' }).check()
+    await page.getByRole('button', { name: /save profile/i }).click()
+    await expect(page.getByRole('alert')).toContainText('must have at least one unit assignment')
+  })
+
+  test('enabling Director without Shareholder shows validation error', async ({ page }) => {
+    const user = await seedRegularUser('-director-no-shareholder')
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await page.getByRole('checkbox', { name: 'Director' }).check()
+    await page.getByRole('button', { name: /save profile/i }).click()
+    await expect(page.getByRole('alert')).toContainText('must also be a Shareholder')
+  })
+
+  test('removing Shareholder from a Director shows validation error', async ({ page }) => {
+    const unit = await prisma.unit.findFirst({ orderBy: { id: 'asc' } })
+    const user = await prisma.user.upsert({
+      where: { email: 'director-shareholder@test.local' },
+      create: {
+        name: 'Director Shareholder',
+        email: 'director-shareholder@test.local',
+        passwordHash: null,
+        isActive: true,
+        isDirector: true,
+        isShareholder: true,
+      },
+      update: { isDirector: true, isShareholder: true, isActive: true },
+    })
+    if (unit) {
+      await prisma.userUnit.upsert({
+        where: { userId_unitId: { userId: user.id, unitId: unit.id } },
+        create: { userId: user.id, unitId: unit.id },
+        update: {},
+      })
+    }
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    await page.getByRole('checkbox', { name: 'Shareholder' }).uncheck()
+    await page.getByRole('button', { name: /save profile/i }).click()
+    await expect(page.getByRole('alert')).toContainText('remove Director first')
+  })
+
+  test('removing last unit auto-removes Shareholder role', async ({ page }) => {
+    const unit = await prisma.unit.findFirst({ orderBy: { id: 'asc' } })
+    const user = await prisma.user.upsert({
+      where: { email: 'shareholder-unit@test.local' },
+      create: { name: 'Shareholder With Unit', email: 'shareholder-unit@test.local', passwordHash: null, isActive: true, isShareholder: true },
+      update: { isShareholder: true, isActive: true },
+    })
+    if (unit) await prisma.userUnit.upsert({ where: { userId_unitId: { userId: user.id, unitId: unit.id } }, create: { userId: user.id, unitId: unit.id }, update: {} })
+    await loginAsAdmin(page)
+    await page.goto(`/admin/users/${user.id}/edit`)
+    const cb = page.locator('input[type="checkbox"]').first()
+    if (await cb.isChecked()) await cb.uncheck()
+    await page.getByRole('button', { name: /save units/i }).click()
+    await page.reload()
+    await expect(page.getByRole('checkbox', { name: 'Shareholder' })).not.toBeChecked()
   })
 })
