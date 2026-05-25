@@ -20,6 +20,9 @@ vi.mock('@/lib/db', () => ({
     session: {
       deleteMany: vi.fn(),
     },
+    invitationToken: {
+      updateMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }))
@@ -31,6 +34,7 @@ import {
   updateUserUnits,
   reactivateUser,
   deactivateUser,
+  cancelInvite,
   updateProfileFormAction,
   updateUnitsFormAction,
 } from '@/lib/actions/admin-users'
@@ -42,6 +46,7 @@ const mockFindUnique = vi.mocked(db.user.findUnique)
 const mockUserUpdate = vi.mocked(db.user.update)
 const mockTransaction = vi.mocked(db.$transaction)
 const mockFindMany = vi.mocked(db.userUnit.findMany)
+const mockInvitationTokenUpdateMany = vi.mocked(db.invitationToken.updateMany)
 
 const baseInput = {
   name: 'Alice',
@@ -214,5 +219,33 @@ describe('isAdmin guard — all privileged actions return Forbidden for non-admi
     const result = await deactivateUser('other-user')
     expect(result).toEqual({ data: null, error: 'Forbidden' })
     expect(mockTransaction).not.toHaveBeenCalled()
+  })
+
+  it('cancelInvite returns Forbidden when caller is not admin', async () => {
+    const result = await cancelInvite('user-1')
+    expect(result).toEqual({ data: null, error: 'Forbidden' })
+    expect(mockInvitationTokenUpdateMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('cancelInvite', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuth.mockResolvedValue({ user: { id: 'admin-id', isAdmin: true } } as never)
+    mockInvitationTokenUpdateMany.mockResolvedValue({ count: 1 } as never)
+  })
+
+  it('calls db.invitationToken.updateMany with usedAt: null filter and sets usedAt', async () => {
+    await cancelInvite('user-1')
+    expect(mockInvitationTokenUpdateMany).toHaveBeenCalledOnce()
+    expect(mockInvitationTokenUpdateMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', usedAt: null },
+      data: { usedAt: expect.any(Date) },
+    })
+  })
+
+  it('returns { data: null, error: null } on success', async () => {
+    const result = await cancelInvite('user-1')
+    expect(result).toEqual({ data: null, error: null })
   })
 })

@@ -78,6 +78,16 @@ export async function deactivateUser(id: string): Promise<ActionResult<void>> {
   return { data: undefined, error: null }
 }
 
+export async function cancelInvite(userId: string): Promise<ActionResult<null>> {
+  const guard = await requireAdmin()
+  if (guard) return guard
+  await db.invitationToken.updateMany({
+    where: { userId, usedAt: null },
+    data: { usedAt: new Date() },
+  })
+  return { data: null as null, error: null }
+}
+
 export async function reactivateUser(id: string): Promise<ActionResult<void>> {
   const guard = await requireAdmin()
   if (guard) return guard

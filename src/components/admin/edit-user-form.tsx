@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useActionState } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateProfileFormAction, updateUnitsFormAction, deactivateUser, reactivateUser } from '@/lib/actions/admin-users'
+import { updateProfileFormAction, updateUnitsFormAction, deactivateUser, reactivateUser, cancelInvite } from '@/lib/actions/admin-users'
 import { resendInvite } from '@/lib/actions/users'
 import type { Unit, User } from '@prisma/client'
 
@@ -21,12 +21,14 @@ export function EditUserForm({ user, allUnits, currentUnitIds, isInvited, isSelf
   const updateBound = updateProfileFormAction.bind(null, user.id)
   const deactivateBound = deactivateUser.bind(null, user.id)
   const reactivateBound = reactivateUser.bind(null, user.id)
+  const cancelInviteBound = cancelInvite.bind(null, user.id)
   const updateUnitsBound = updateUnitsFormAction.bind(null, user.id)
   const resendBound = resendInvite.bind(null, user.id)
 
   const [profileState, profileAction, profilePending] = useActionState(updateBound, null)
   const [deactivateState, deactivateAction] = useActionState(deactivateBound, null)
   const [, reactivateAction] = useActionState(reactivateBound, null)
+  const [, cancelInviteAction] = useActionState(cancelInviteBound, null)
   const [unitsState, unitsAction] = useActionState(updateUnitsBound, null)
   const [, resendAction] = useActionState(resendBound, null)
 
@@ -94,7 +96,7 @@ export function EditUserForm({ user, allUnits, currentUnitIds, isInvited, isSelf
             </button>
           </form>
         ) : isInvited ? (
-          <form action={deactivateAction}>
+          <form action={cancelInviteAction}>
             <button type="submit"
               className="rounded-md border border-orange-300 px-4 py-2 text-sm text-orange-600 hover:bg-orange-50">
               Cancel invite
