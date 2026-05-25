@@ -109,7 +109,7 @@ describe('createUser', () => {
   it('creates user and sends invite email on success', async () => {
     mockFindUnique.mockResolvedValue(null)
     const tx = makeTx()
-    mockTransaction.mockImplementation(async (callback) => callback(tx))
+    mockTransaction.mockImplementation(((callback: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => callback(tx)) as never)
     const result = await createUser(createInput)
     expect(result.error).toBeNull()
     expect(result.data).toMatchObject({ id: 'user-123', email: 'bob@test.com' })
@@ -120,7 +120,7 @@ describe('createUser', () => {
   it('returns error when invite email fails', async () => {
     mockFindUnique.mockResolvedValue(null)
     const tx = makeTx()
-    mockTransaction.mockImplementation(async (callback) => callback(tx))
+    mockTransaction.mockImplementation(((callback: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => callback(tx)) as never)
     mockSendEmail.mockRejectedValue(new Error('SMTP failure'))
     const result = await createUser(createInput)
     expect(result.data).toBeNull()
@@ -137,7 +137,7 @@ describe('activateAccount', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockTransaction.mockImplementation((ops) => Promise.all(ops as Promise<unknown>[]))
+    mockTransaction.mockImplementation(((ops: Promise<unknown>[]) => Promise.all(ops)) as never)
     mockUserUpdate.mockResolvedValue({} as never)
     vi.mocked(db.invitationToken.update).mockResolvedValue({} as never)
   })
@@ -165,6 +165,7 @@ describe('updateUser', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAuth.mockResolvedValue({ user: { id: 'admin-id', isAdmin: true } } as never)
     mockUserUpdate.mockResolvedValue({ ...mockCreatedUser, ...updateInput, id: 'user-1' } as never)
   })
 
@@ -186,25 +187,25 @@ describe('updateUser', () => {
 describe('deactivateUser', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockTransaction.mockImplementation((ops) => Promise.all(ops as Promise<unknown>[]))
+    mockTransaction.mockImplementation(((ops: Promise<unknown>[]) => Promise.all(ops)) as never)
     mockUserUpdate.mockResolvedValue({} as never)
     vi.mocked(db.session.deleteMany).mockResolvedValue({ count: 1 } as never)
   })
 
   it('prevents self-deactivation', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'target-id' } } as never)
+    mockAuth.mockResolvedValue({ user: { id: 'target-id', isAdmin: true } } as never)
     const result = await deactivateUser('target-id')
     expect(result.error).toContain('cannot deactivate your own account')
     expect(mockTransaction).not.toHaveBeenCalled()
   })
 
   it('deactivates another user and deletes their sessions', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'admin-id' } } as never)
+    mockAuth.mockResolvedValue({ user: { id: 'admin-id', isAdmin: true } } as never)
     const result = await deactivateUser('other-user')
     expect(result.error).toBeNull()
     expect(mockTransaction).toHaveBeenCalledOnce()
     expect(mockUserUpdate.mock.calls[0][0].data).toMatchObject({ isActive: false })
-    expect(vi.mocked(db.session.deleteMany).mock.calls[0][0].where).toMatchObject({ userId: 'other-user' })
+    expect(vi.mocked(db.session.deleteMany).mock.calls[0]?.[0]?.where).toMatchObject({ userId: 'other-user' })
   })
 })
 

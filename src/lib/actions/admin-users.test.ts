@@ -17,13 +17,25 @@ vi.mock('@/lib/db', () => ({
       createMany: vi.fn(),
       delete: vi.fn(),
     },
+    session: {
+      deleteMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }))
 
+import { auth } from '~/auth'
 import { db } from '@/lib/db'
-import { updateUser, updateUserUnits } from '@/lib/actions/admin-users'
+import {
+  updateUser,
+  updateUserUnits,
+  reactivateUser,
+  deactivateUser,
+  updateProfileFormAction,
+  updateUnitsFormAction,
+} from '@/lib/actions/admin-users'
 
+const mockAuth = vi.mocked(auth)
 const mockCount = vi.mocked(db.userUnit.count)
 const mockFindFirst = vi.mocked(db.user.findFirst)
 const mockFindUnique = vi.mocked(db.user.findUnique)
@@ -41,6 +53,7 @@ const baseInput = {
 describe('updateUser — Shareholder validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAuth.mockResolvedValue({ user: { id: 'admin-id', isAdmin: true } } as never)
     mockFindFirst.mockResolvedValue(null)
     mockUserUpdate.mockResolvedValue({} as never)
   })
@@ -106,6 +119,7 @@ describe('updateUser — Shareholder validation', () => {
 describe('updateUserUnits — auto-remove isShareholder', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAuth.mockResolvedValue({ user: { id: 'admin-id', isAdmin: true } } as never)
     mockTransaction.mockImplementation(((ops: Promise<unknown>[]) => Promise.all(ops)) as never)
     vi.mocked(db.userUnit.delete).mockResolvedValue({} as never)
     vi.mocked(db.userUnit.createMany).mockResolvedValue({ count: 0 } as never)
@@ -131,5 +145,74 @@ describe('updateUserUnits — auto-remove isShareholder', () => {
 
     expect(mockFindUnique).not.toHaveBeenCalled()
     expect(mockUserUpdate).not.toHaveBeenCalled()
+  })
+})
+
+describe('isAdmin guard — all privileged actions return Forbidden for non-admin callers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // non-admin authenticated session
+    mockAuth.mockResolvedValue({ user: { id: 'caller-id', isAdmin: false } } as never)
+  })
+
+  it('updateUser returns Forbidden when caller is not admin', async () => {
+    const result = await updateUser('user-1', {
+      name: 'Alice',
+      email: 'alice@test.com',
+      isAdmin: false,
+      isDirector: false,
+      isShareholder: false,
+      isCaretaker: false,
+    })
+    expect(result).toEqual({ data: null, error: 'Forbidden' })
+    expect(mockFindFirst).not.toHaveBeenCalled()
+  })
+
+  it('updateUser returns Forbidden when caller has no session', async () => {
+    mockAuth.mockResolvedValue(null as never)
+    const result = await updateUser('user-1', {
+      name: 'Alice',
+      email: 'alice@test.com',
+      isAdmin: false,
+      isDirector: false,
+      isShareholder: false,
+      isCaretaker: false,
+    })
+    expect(result).toEqual({ data: null, error: 'Forbidden' })
+  })
+
+  it('updateProfileFormAction returns Forbidden when caller is not admin', async () => {
+    const fd = new FormData()
+    fd.set('name', 'Alice')
+    fd.set('email', 'alice@test.com')
+    const result = await updateProfileFormAction('user-1', null, fd)
+    expect(result).toEqual({ data: null, error: 'Forbidden' })
+  })
+
+  it('updateUserUnits returns Forbidden when caller is not admin', async () => {
+    const result = await updateUserUnits('user-1', [1, 2])
+    expect(result).toEqual({ data: null, error: 'Forbidden' })
+    expect(mockFindMany).not.toHaveBeenCalled()
+  })
+
+  it('updateUnitsFormAction returns Forbidden when caller is not admin', async () => {
+    const fd = new FormData()
+    fd.append('unitIds', '1')
+    const result = await updateUnitsFormAction('user-1', null, fd)
+    expect(result).toEqual({ data: null, error: 'Forbidden' })
+  })
+
+  it('reactivateUser returns Forbidden when caller is not admin', async () => {
+    const result = await reactivateUser('user-1')
+    expect(result).toEqual({ data: null, error: 'Forbidden' })
+    expect(mockUserUpdate).not.toHaveBeenCalled()
+  })
+
+  it('deactivateUser returns Forbidden when caller is not admin (non-self)', async () => {
+    // caller is authenticated but not admin — different user so no self-deactivation conflict
+    mockAuth.mockResolvedValue({ user: { id: 'caller-id', isAdmin: false } } as never)
+    const result = await deactivateUser('other-user')
+    expect(result).toEqual({ data: null, error: 'Forbidden' })
+    expect(mockTransaction).not.toHaveBeenCalled()
   })
 })

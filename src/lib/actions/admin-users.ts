@@ -5,6 +5,12 @@ import { db } from '@/lib/db'
 import type { ActionResult } from '@/lib/types'
 import type { User } from '@prisma/client'
 
+async function requireAdmin(): Promise<{ data: null; error: string } | null> {
+  const session = await auth()
+  if (!session?.user?.isAdmin) return { data: null, error: 'Forbidden' }
+  return null
+}
+
 export interface UpdateUserInput {
   name: string
   email: string
@@ -15,6 +21,9 @@ export interface UpdateUserInput {
 }
 
 export async function updateUser(id: string, data: UpdateUserInput): Promise<ActionResult<User>> {
+  const guard = await requireAdmin()
+  if (guard) return guard
+
   const conflicting = await db.user.findFirst({
     where: { email: data.email, id: { not: id } },
   })
@@ -56,7 +65,8 @@ export async function updateUser(id: string, data: UpdateUserInput): Promise<Act
 
 export async function deactivateUser(id: string): Promise<ActionResult<void>> {
   const session = await auth()
-  if (session?.user?.id === id) {
+  if (!session?.user?.isAdmin) return { data: null, error: 'Forbidden' }
+  if (session.user.id === id) {
     return { data: null, error: 'You cannot deactivate your own account.' }
   }
 
@@ -69,6 +79,9 @@ export async function deactivateUser(id: string): Promise<ActionResult<void>> {
 }
 
 export async function reactivateUser(id: string): Promise<ActionResult<void>> {
+  const guard = await requireAdmin()
+  if (guard) return guard
+
   await db.user.update({ where: { id }, data: { isActive: true } })
   return { data: undefined, error: null }
 }
@@ -78,6 +91,9 @@ export async function updateProfileFormAction(
   _prevState: ActionResult<User> | null,
   formData: FormData,
 ): Promise<ActionResult<User>> {
+  const guard = await requireAdmin()
+  if (guard) return guard
+
   return updateUser(id, {
     name: formData.get('name') as string,
     email: formData.get('email') as string,
@@ -93,6 +109,9 @@ export async function updateUnitsFormAction(
   _prevState: ActionResult<{ occupancyWarnings: number[] }> | null,
   formData: FormData,
 ): Promise<ActionResult<{ occupancyWarnings: number[] }>> {
+  const guard = await requireAdmin()
+  if (guard) return guard
+
   const unitIds = (formData.getAll('unitIds') as string[]).map(Number).filter((n) => !isNaN(n))
   return updateUserUnits(userId, unitIds)
 }
@@ -101,6 +120,9 @@ export async function updateUserUnits(
   userId: string,
   newUnitIds: number[],
 ): Promise<ActionResult<{ occupancyWarnings: number[] }>> {
+  const guard = await requireAdmin()
+  if (guard) return guard
+
   const current = await db.userUnit.findMany({ where: { userId }, select: { unitId: true } })
   const currentIds = current.map((r) => r.unitId)
 

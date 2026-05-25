@@ -94,7 +94,7 @@ describe('resetPasswordAction', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockTransaction.mockImplementation((ops) => Promise.all(ops as Promise<unknown>[]))
+    mockTransaction.mockImplementation(((ops: Promise<unknown>[]) => Promise.all(ops)) as never)
     vi.mocked(db.user.update).mockResolvedValue({} as never)
     vi.mocked(db.passwordResetToken.update).mockResolvedValue({} as never)
   })
