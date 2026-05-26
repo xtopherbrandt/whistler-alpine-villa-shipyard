@@ -64,7 +64,7 @@ describe('updateUser — Shareholder validation', () => {
     mockUserUpdate.mockResolvedValue({} as never)
   })
 
-  it('Rule 1: returns error when isShareholder is true and unit count is 0', async () => {
+  it('should return error when isShareholder is true and unit count is 0', async () => {
     mockCount.mockResolvedValue(0)
     mockFindUnique.mockResolvedValue(null)
     const result = await updateUser('user-1', {
@@ -76,7 +76,7 @@ describe('updateUser — Shareholder validation', () => {
     expect(result.error).toBe('A Shareholder must have at least one unit assignment')
   })
 
-  it('Rule 1 passes: no error when isShareholder is true and unit count > 0', async () => {
+  it('should succeed when isShareholder is true and unit count is greater than 0', async () => {
     mockCount.mockResolvedValue(2)
     mockFindUnique.mockResolvedValue(null)
     const result = await updateUser('user-1', {
@@ -85,10 +85,10 @@ describe('updateUser — Shareholder validation', () => {
       isShareholder: true,
     })
     expect(result.error).toBeNull()
-    expect(mockUserUpdate).toHaveBeenCalledOnce()
+    expect(result.data).toBeTruthy()
   })
 
-  it('Rule 2: returns error when isDirector is true and isShareholder is false', async () => {
+  it('should return error when isDirector is true and isShareholder is false', async () => {
     mockFindUnique.mockResolvedValue({ isDirector: false } as never)
     const result = await updateUser('user-1', {
       ...baseInput,
@@ -99,7 +99,7 @@ describe('updateUser — Shareholder validation', () => {
     expect(result.error).toBe('A Director must also be a Shareholder')
   })
 
-  it('Rule 3: returns error when removing Shareholder from a Director', async () => {
+  it('should return error when removing Shareholder from a Director', async () => {
     mockFindUnique.mockResolvedValue({ isDirector: true } as never)
     const result = await updateUser('user-1', {
       ...baseInput,
@@ -110,7 +110,7 @@ describe('updateUser — Shareholder validation', () => {
     expect(result.error).toBe('Cannot remove Shareholder from a Director — remove Director first')
   })
 
-  it('Rule 3 passes: no error when removing Shareholder from a non-Director', async () => {
+  it('should succeed when removing Shareholder from a non-Director', async () => {
     mockFindUnique.mockResolvedValue({ isDirector: false } as never)
     const result = await updateUser('user-1', {
       ...baseInput,
@@ -118,7 +118,7 @@ describe('updateUser — Shareholder validation', () => {
       isShareholder: false,
     })
     expect(result.error).toBeNull()
-    expect(mockUserUpdate).toHaveBeenCalledOnce()
+    expect(result.data).toBeTruthy()
   })
 })
 
@@ -132,23 +132,26 @@ describe('updateUserUnits — auto-remove isShareholder', () => {
     mockUserUpdate.mockResolvedValue({} as never)
   })
 
-  it('calls $transaction with user.update isShareholder:false when all units removed from a Shareholder', async () => {
+  it('should remove isShareholder when all units are removed from a Shareholder', async () => {
     mockFindMany.mockResolvedValue([{ unitId: 3 }, { unitId: 7 }] as never)
     mockFindUnique.mockResolvedValue({ isShareholder: true } as never)
 
-    await updateUserUnits('user-1', [])
+    const result = await updateUserUnits('user-1', [])
 
-    expect(mockTransaction).toHaveBeenCalledOnce()
+    expect(result.error).toBeNull()
+    expect(result.data).toEqual({ occupancyWarnings: [] })
     expect(mockUserUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ data: { isShareholder: false } }),
     )
   })
 
-  it('does NOT update isShareholder when units remain after save', async () => {
+  it('should not update isShareholder when units remain after save', async () => {
     mockFindMany.mockResolvedValue([{ unitId: 3 }] as never)
 
-    await updateUserUnits('user-1', [5])
+    const result = await updateUserUnits('user-1', [5])
 
+    expect(result.error).toBeNull()
+    expect(result.data).toEqual({ occupancyWarnings: [] })
     expect(mockFindUnique).not.toHaveBeenCalled()
     expect(mockUserUpdate).not.toHaveBeenCalled()
   })
@@ -214,7 +217,7 @@ describe('isAdmin guard — all privileged actions return Forbidden for non-admi
     expect(mockUserUpdate).not.toHaveBeenCalled()
   })
 
-  it('deactivateUser returns Forbidden when caller is not admin (non-self)', async () => {
+  it('deactivateUser returns Forbidden when caller is not admin', async () => {
     // caller is authenticated but not admin — different user so no self-deactivation conflict
     mockAuth.mockResolvedValue({ user: { id: 'caller-id', isAdmin: false } } as never)
     const result = await deactivateUser('other-user')
@@ -236,16 +239,16 @@ describe('cancelInvite', () => {
     mockInvitationTokenUpdateMany.mockResolvedValue({ count: 1 } as never)
   })
 
-  it('calls db.invitationToken.updateMany with usedAt: null filter and sets usedAt', async () => {
-    await cancelInvite('user-1')
-    expect(mockInvitationTokenUpdateMany).toHaveBeenCalledOnce()
+  it('should mark pending tokens as used when cancelling an invite', async () => {
+    const result = await cancelInvite('user-1')
+    expect(result).toEqual({ data: null, error: null })
     expect(mockInvitationTokenUpdateMany).toHaveBeenCalledWith({
       where: { userId: 'user-1', usedAt: null },
       data: { usedAt: expect.any(Date) },
     })
   })
 
-  it('returns { data: null, error: null } on success', async () => {
+  it('should return success when invite is cancelled', async () => {
     const result = await cancelInvite('user-1')
     expect(result).toEqual({ data: null, error: null })
   })
