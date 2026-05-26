@@ -3,6 +3,7 @@
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
+import { auth } from '~/auth'
 import { db } from '@/lib/db'
 import { sendEmail } from '@/lib/email/send'
 import { InviteEmail } from '@/lib/email/InviteEmail'
@@ -110,6 +111,9 @@ export async function activateAccount(
 }
 
 export async function resendInvite(userId: string): Promise<ActionResult<void>> {
+  const session = await auth()
+  if (!session?.user?.isAdmin) return { data: null, error: 'Forbidden' }
+
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { isActive: true, name: true, email: true },

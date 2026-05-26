@@ -215,9 +215,18 @@ describe('resendInvite', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAuth.mockResolvedValue({ user: { id: 'admin-id', isAdmin: true } } as never)
     mockSendEmail.mockResolvedValue(undefined)
     vi.mocked(db.invitationToken.updateMany).mockResolvedValue({ count: 1 } as never)
     vi.mocked(db.invitationToken.create).mockResolvedValue(newInviteToken as never)
+  })
+
+  it('returns Forbidden when called by a non-admin user', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'user-id', isAdmin: false } } as never)
+    const result = await resendInvite('user-1')
+    expect(result.data).toBeNull()
+    expect(result.error).toBe('Forbidden')
+    expect(mockFindUnique).not.toHaveBeenCalled()
   })
 
   it('returns error if user is already active', async () => {
