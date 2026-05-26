@@ -128,6 +128,11 @@ test.describe('admin user management', () => {
     expect(oldRecord?.usedAt).not.toBeNull()
     const newTokens = await prisma.invitationToken.findMany({ where: { userId: user.id, usedAt: null } })
     expect(newTokens.length).toBe(1)
+    const newToken = newTokens[0]
+    const expectedExpiry = new Date(Date.now() + 72 * 60 * 60 * 1000)
+    // Allow ±60s window to account for test execution time
+    expect(newToken.expiresAt.getTime()).toBeGreaterThan(expectedExpiry.getTime() - 60_000)
+    expect(newToken.expiresAt.getTime()).toBeLessThan(expectedExpiry.getTime() + 60_000)
   })
 
   test('enabling Shareholder with no units shows validation error', async ({ page }) => {
