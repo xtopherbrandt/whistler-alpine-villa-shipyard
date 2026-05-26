@@ -16,6 +16,7 @@ vi.mock('@/lib/db', () => ({
       findMany: vi.fn(),
       createMany: vi.fn(),
       delete: vi.fn(),
+      deleteMany: vi.fn(),
     },
     session: {
       deleteMany: vi.fn(),
@@ -125,8 +126,8 @@ describe('updateUserUnits — auto-remove isShareholder', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockAuth.mockResolvedValue({ user: { id: 'admin-id', isAdmin: true } } as never)
-    mockTransaction.mockImplementation(((ops: Promise<unknown>[]) => Promise.all(ops)) as never)
-    vi.mocked(db.userUnit.delete).mockResolvedValue({} as never)
+    mockTransaction.mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db))
+    vi.mocked(db.userUnit.deleteMany).mockResolvedValue({ count: 0 } as never)
     vi.mocked(db.userUnit.createMany).mockResolvedValue({ count: 0 } as never)
     mockUserUpdate.mockResolvedValue({} as never)
   })

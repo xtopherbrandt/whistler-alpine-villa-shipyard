@@ -20,17 +20,10 @@ export interface UpdateUserInput {
   isCaretaker: boolean
 }
 
-export async function updateUser(id: string, data: UpdateUserInput): Promise<ActionResult<User>> {
-  const guard = await requireAdmin()
-  if (guard) return guard
-
-  const conflicting = await db.user.findFirst({
-    where: { email: data.email, id: { not: id } },
-  })
-  if (conflicting) {
-    return { data: null, error: 'That email address is already in use.' }
-  }
-
+async function validateShareholderRules(
+  id: string,
+  data: Pick<UpdateUserInput, 'isShareholder' | 'isDirector'>,
+): Promise<{ data: null; error: string } | null> {
   const [unitCount, currentUser] = await Promise.all([
     data.isShareholder ? db.userUnit.count({ where: { userId: id } }) : Promise.resolve(1),
     data.isShareholder === false || data.isDirector
@@ -47,6 +40,20 @@ export async function updateUser(id: string, data: UpdateUserInput): Promise<Act
   if (data.isShareholder === false && currentUser?.isDirector) {
     return { data: null, error: 'Cannot remove Shareholder from a Director — remove Director first' }
   }
+  return null
+}
+
+export async function updateUser(id: string, data: UpdateUserInput): Promise<ActionResult<User>> {
+  const guard = await requireAdmin()
+  if (guard) return guard
+
+  const conflicting = await db.user.findFirst({
+    where: { email: data.email, id: { not: id } },
+  })
+  if (conflicting) return { data: null, error: 'That email address is already in use.' }
+
+  const validationError = await validateShareholderRules(id, data)
+  if (validationError) return validationError
 
   const updated = await db.user.update({
     where: { id },
@@ -139,33 +146,18 @@ export async function updateUserUnits(
   const toAdd = newUnitIds.filter((id) => !currentIds.includes(id))
   const toRemove = currentIds.filter((id) => !newUnitIds.includes(id))
 
-  const deleteOps = toRemove.map((unitId) =>
-    db.userUnit.delete({ where: { userId_unitId: { userId, unitId } } }),
-  )
-  const createOp =
-    toAdd.length > 0
-      ? [
-          db.userUnit.createMany({
-            data: toAdd.map((unitId) => ({ userId, unitId })),
-            skipDuplicates: true,
-          }),
-        ]
-      : []
-
-  const maybeShareholderOp: typeof deleteOps = []
-  if (newUnitIds.length === 0) {
-    const user = await db.user.findUnique({ where: { id: userId }, select: { isShareholder: true } })
-    if (user?.isShareholder) {
-      maybeShareholderOp.push(
-        db.user.update({ where: { id: userId }, data: { isShareholder: false } }) as never,
-      )
+  await db.$transaction(async (tx) => {
+    if (toAdd.length > 0) {
+      await tx.userUnit.createMany({ data: toAdd.map((unitId) => ({ userId, unitId })), skipDuplicates: true })
     }
-  }
-
-  const allOps = [...createOp, ...deleteOps, ...maybeShareholderOp]
-  if (allOps.length > 0) {
-    await db.$transaction(allOps as never)
-  }
+    if (toRemove.length > 0) {
+      await tx.userUnit.deleteMany({ where: { userId, unitId: { in: toRemove } } })
+    }
+    if (newUnitIds.length === 0) {
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { isShareholder: true } })
+      if (user?.isShareholder) await tx.user.update({ where: { id: userId }, data: { isShareholder: false } })
+    }
+  })
 
   return { data: { occupancyWarnings: [] }, error: null }
 }
