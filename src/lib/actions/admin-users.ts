@@ -34,11 +34,11 @@ async function validateShareholderRules(
   if (data.isShareholder && unitCount === 0) {
     return { data: null, error: 'A Shareholder must have at least one unit assignment' }
   }
-  if (data.isDirector && !data.isShareholder) {
-    return { data: null, error: 'A Director must also be a Shareholder' }
-  }
   if (data.isShareholder === false && currentUser?.isDirector) {
     return { data: null, error: 'Cannot remove Shareholder from a Director — remove Director first' }
+  }
+  if (data.isDirector && !data.isShareholder) {
+    return { data: null, error: 'A Director must also be a Shareholder' }
   }
   return null
 }
