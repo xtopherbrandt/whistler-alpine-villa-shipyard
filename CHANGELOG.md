@@ -1,5 +1,29 @@
 # Changelog
 
+## [Sprint 002] — 2026-05-26
+
+### Added
+
+**F003 — Shareholder Role (extends User & Unit Administration)**
+- `isShareholder` boolean field in Prisma schema + migration
+- Validation rules: Shareholder requires ≥1 unit assignment; Director requires Shareholder; cannot remove Shareholder from a Director
+- Removing a Shareholder's last unit auto-removes the Shareholder role
+- Shareholder checkbox in admin edit-user form
+- Shareholder displayed in user list roles column
+- `isShareholder` in Auth.js JWT and session pipeline
+
+### Fixed
+
+- **B001/B002**: Shareholder role was missing from edit form and user list (now surfaced)
+- **B003**: Account Actions section only showed Deactivate for Invited users; now shows correct action (Deactivate / Cancel invite / Reactivate) based on account state
+- **B004**: Unit assignment checkboxes reverted to stale state after save (added `router.refresh()` on successful units action)
+
+### Security
+
+- Added `requireAdmin()` guard to all 6 admin server actions (was missing on 5 of 6)
+- `cancelInvite` now invalidates pending invitation tokens (was inadvertently calling `deactivateUser`)
+- `resendInvite` now enforces admin session (was unauthenticated)
+
 ## [Sprint 001] — 2026-05-23
 
 ### Added
