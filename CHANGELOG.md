@@ -1,5 +1,19 @@
 # Changelog
 
+## [Sprint 003] — 2026-05-27
+
+### Changed
+
+#### F004 — Trunk-Based Branching Workflow
+
+- Sprint work now lives on short-lived `sprint/NNN` branches, squash-merged to `master` at approval
+- Migrated `feat/e005-auth-and-user-management` to master via squash commit (`feat(e005): auth and user management stack (sprint-001 + sprint-002)`)
+- Removed 5 stale sprint-002 shipyard worktrees and their local branches
+- Pruned stale `feat/e005` remote-tracking ref (branch was already deleted on merge)
+- Verified master is releasable: `npm run build` clean, 45 unit tests passing
+- Added `.gitignore` entries for `test-results/` and `.claude/settings.json` (machine-local files)
+- Shipyard config updated: `main_branch: master`, `branching_strategy: trunk-based`, `merge_style: squash`
+
 ## [Sprint 002] — 2026-05-26
 
 ### Added

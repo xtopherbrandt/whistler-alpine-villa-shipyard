@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results/
 
 # next.js
 /.next/
@@ -40,6 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Claude Code local settings (machine-specific — never commit)
+.claude/settings.json
 # Claude Code local memory (machine-specific paths — never commit)
 .claude/projects/
 # Shipyard task worktrees (temporary, created by builder subagents)
