@@ -1,5 +1,18 @@
 # Changelog
 
+## [Sprint 004] — 2026-05-28
+
+### Added
+
+#### F005 — Dependency Vulnerability Management
+
+- GitHub Actions CI workflow (`.github/workflows/ci.yml`) with two jobs: unit tests (`npx vitest run`) and security audit (`npx audit-ci --high --skip-dev`) — triggers on push to `sprint/**` and `master`, and on PRs targeting `master`
+- `audit-ci` v7.1.0 installed as dev dependency; `.audit-ci.json` allowlist baseline (`{"high": true}`)
+- Dependabot configured for npm ecosystem (`.github/dependabot.yml`) — daily schedule, security updates, max 5 open PRs
+- Partially closes F004 Scenario 6: unit tests now run automatically on every sprint branch push
+
+> **Manual step required:** Enable Dependabot alerts + security updates in GitHub repo Settings → Security → Dependabot
+
 ## [Sprint 003] — 2026-05-27
 
 ### Changed
