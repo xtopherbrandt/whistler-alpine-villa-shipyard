@@ -152,6 +152,15 @@ export async function updateUserUnits(
     }
     if (toRemove.length > 0) {
       await tx.userUnit.deleteMany({ where: { userId, unitId: { in: toRemove } } })
+      await tx.stay.updateMany({
+        where: {
+          userId,
+          unitId: { in: toRemove },
+          status: 'CONFIRMED',
+          checkInDate: { gte: new Date() },
+        },
+        data: { status: 'CANCELLED' },
+      })
     }
     if (newUnitIds.length === 0) {
       const user = await tx.user.findUnique({ where: { id: userId }, select: { isShareholder: true } })
