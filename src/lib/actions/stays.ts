@@ -212,7 +212,9 @@ export async function cancelStay(stayId: string): Promise<ActionResult<Stay>> {
   return { data: cancelled, error: null }
 }
 
-export async function listStays(): Promise<ActionResult<Stay[]>> {
+export async function listStays(): Promise<
+  ActionResult<Array<Stay & { vehicles: Vehicle[]; unit: Unit | null }>>
+> {
   const authResult = await requireShareholder()
   if ('error' in authResult) return { data: null, error: 'Forbidden' }
   const { userId } = authResult
