@@ -7,15 +7,17 @@ function futureDate(daysFromNow: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-test.beforeAll(async () => {
-  await seedShareholder()
-})
-
-test.afterEach(async () => {
-  await prisma.stay.deleteMany({ where: { unit: { id: 1 } } })
-})
-
 test.describe('check-in registration', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  test.beforeAll(async () => {
+    await seedShareholder()
+  })
+
+  test.afterEach(async () => {
+    await prisma.stay.deleteMany({ where: { unit: { id: 1 } } })
+  })
+
   test('shareholder stays list page shows heading and register link', async ({ page }) => {
     await loginAsShareholder(page)
     await page.goto('/stays')
@@ -31,6 +33,7 @@ test.describe('check-in registration', () => {
     await page.fill('[name="checkInDate"]', futureDate(7))
     await page.fill('[name="checkOutDate"]', futureDate(14))
     await page.getByLabel(/own stay/i).check()
+    await page.getByRole('button', { name: /add vehicle/i }).click()
     await page.fill('[name="vehicle0LicensePlate"]', 'ABC123')
     await page.fill('[name="vehicle0Make"]', 'Toyota')
     await page.fill('[name="vehicle0Model"]', 'Camry')
@@ -76,7 +79,7 @@ test.describe('check-in registration', () => {
     await page.fill('[name="checkOutDate"]', futureDate(40))
     await page.getByRole('button', { name: /register stay/i }).click()
 
-    await expect(page.locator('[role="alert"]')).toContainText(/already has a booking/i)
+    await expect(page.locator('p[role="alert"]')).toContainText(/already has a booking/i)
     await expect(page).toHaveURL('/stays/new')
   })
 
