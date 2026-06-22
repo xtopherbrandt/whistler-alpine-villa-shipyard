@@ -46,10 +46,12 @@ async function seedUsedInvite() {
 }
 
 test.describe('invite activation flow', () => {
+  test.describe.configure({ mode: 'serial' })
+
   test('valid invite token shows activation form', async ({ page }) => {
     const { token } = await seedInvitedUser()
     await page.goto(`/invite/${token}`)
-    await expect(page.getByRole('heading', { name: /activate/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /set your password/i })).toBeVisible()
     await expect(page.getByLabel(/password/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /activate/i })).toBeVisible()
   })
@@ -57,19 +59,19 @@ test.describe('invite activation flow', () => {
   test('expired invite shows error message', async ({ page }) => {
     const { token } = await seedExpiredInvite()
     await page.goto(`/invite/${token}`)
-    await expect(page.getByText(/expired/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: /expired/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /activate/i })).not.toBeVisible()
   })
 
   test('already-used token shows error message', async ({ page }) => {
     const { token } = await seedUsedInvite()
     await page.goto(`/invite/${token}`)
-    await expect(page.getByText(/expired/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: /expired/i })).toBeVisible()
   })
 
   test('unknown token shows error message', async ({ page }) => {
     await page.goto('/invite/notarealtoken00000000000000000000000000000000000000000000000000')
-    await expect(page.getByText(/expired/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: /expired/i })).toBeVisible()
   })
 
   test('missing token redirects or shows error', async ({ page }) => {

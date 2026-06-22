@@ -83,4 +83,49 @@ describe('loginAction', () => {
       redirectTo: '/admin/users',
     })
   })
+
+  it('uses callbackUrl from formData when it is a safe relative path', async () => {
+    mockCount.mockResolvedValue(0)
+    mockFindUnique.mockResolvedValue({ isAdmin: true } as never)
+    const redirect = Object.assign(new Error('NEXT_REDIRECT'), { digest: 'NEXT_REDIRECT' })
+    mockSignIn.mockRejectedValue(redirect)
+    const fd = makeFormData('admin@test.com', 'pass')
+    fd.set('callbackUrl', '/stays')
+    await expect(loginAction(null, fd)).rejects.toThrow()
+    expect(mockSignIn).toHaveBeenCalledWith('credentials', {
+      email: 'admin@test.com',
+      password: 'pass',
+      redirectTo: '/stays',
+    })
+  })
+
+  it('ignores callbackUrl when it is an absolute URL (open redirect prevention)', async () => {
+    mockCount.mockResolvedValue(0)
+    mockFindUnique.mockResolvedValue({ isAdmin: true } as never)
+    const redirect = Object.assign(new Error('NEXT_REDIRECT'), { digest: 'NEXT_REDIRECT' })
+    mockSignIn.mockRejectedValue(redirect)
+    const fd = makeFormData('admin@test.com', 'pass')
+    fd.set('callbackUrl', 'https://evil.com')
+    await expect(loginAction(null, fd)).rejects.toThrow()
+    expect(mockSignIn).toHaveBeenCalledWith('credentials', {
+      email: 'admin@test.com',
+      password: 'pass',
+      redirectTo: '/admin/users',
+    })
+  })
+
+  it('ignores callbackUrl starting with // (protocol-relative open redirect)', async () => {
+    mockCount.mockResolvedValue(0)
+    mockFindUnique.mockResolvedValue({ isAdmin: true } as never)
+    const redirect = Object.assign(new Error('NEXT_REDIRECT'), { digest: 'NEXT_REDIRECT' })
+    mockSignIn.mockRejectedValue(redirect)
+    const fd = makeFormData('admin@test.com', 'pass')
+    fd.set('callbackUrl', '//evil.com')
+    await expect(loginAction(null, fd)).rejects.toThrow()
+    expect(mockSignIn).toHaveBeenCalledWith('credentials', {
+      email: 'admin@test.com',
+      password: 'pass',
+      redirectTo: '/admin/users',
+    })
+  })
 })

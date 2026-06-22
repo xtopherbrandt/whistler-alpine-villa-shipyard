@@ -30,5 +30,6 @@ declare module 'next-auth/jwt' {
     isShareholder: boolean
     isCaretaker: boolean
     isActive: boolean
+    lastChecked: number
   }
 }

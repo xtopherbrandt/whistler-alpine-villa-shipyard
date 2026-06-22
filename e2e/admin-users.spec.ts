@@ -9,6 +9,8 @@ test.beforeAll(async () => {
 })
 
 test.describe('admin user management', () => {
+  test.describe.configure({ mode: 'serial' })
+
   test('admin user list shows users with correct statuses', async ({ page }) => {
     await loginAsAdmin(page)
     await expect(page.getByRole('table')).toBeVisible()

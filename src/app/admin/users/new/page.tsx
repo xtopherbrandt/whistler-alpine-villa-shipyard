@@ -5,7 +5,8 @@ import { NewUserForm } from '@/components/admin/new-user-form'
 
 export default async function AdminNewUserPage() {
   const session = await auth()
-  if (!session?.user?.isAdmin) redirect('/')
+  if (!session) redirect('/login')
+  if (!session.user?.isAdmin) redirect('/')
 
   const units = await db.unit.findMany({ orderBy: { id: 'asc' } })
 

@@ -1,7 +1,15 @@
 import { auth } from '~/auth'
 
+export const runtime = 'nodejs'
+
 export default auth((req) => {
-  if (!req.auth) return Response.redirect(new URL('/login', req.url))
+  if (!req.auth) {
+    const callbackUrl = encodeURIComponent(req.nextUrl.pathname + req.nextUrl.search)
+    return Response.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, req.url))
+  }
+  if (req.nextUrl.pathname.startsWith('/stays') && !req.auth.user.isShareholder) {
+    return Response.redirect(new URL('/', req.url))
+  }
 })
 
 export const config = {

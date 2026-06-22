@@ -3,6 +3,7 @@
 import { auth } from '~/auth'
 import { db } from '@/lib/db'
 import type { ActionResult } from '@/lib/types'
+import { toUtcDate } from '@/lib/utils/dates'
 import type { User } from '@prisma/client'
 
 async function requireAdmin(): Promise<{ data: null; error: string } | null> {
@@ -152,6 +153,15 @@ export async function updateUserUnits(
     }
     if (toRemove.length > 0) {
       await tx.userUnit.deleteMany({ where: { userId, unitId: { in: toRemove } } })
+      await tx.stay.updateMany({
+        where: {
+          userId,
+          unitId: { in: toRemove },
+          status: 'CONFIRMED',
+          checkInDate: { gte: toUtcDate(new Date().toISOString().slice(0, 10)) },
+        },
+        data: { status: 'CANCELLED' },
+      })
     }
     if (newUnitIds.length === 0) {
       const user = await tx.user.findUnique({ where: { id: userId }, select: { isShareholder: true } })

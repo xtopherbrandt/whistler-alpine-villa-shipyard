@@ -6,9 +6,10 @@ import { loginAction } from '@/lib/actions/auth'
 
 interface Props {
   successMessage?: string
+  callbackUrl?: string
 }
 
-export function LoginForm({ successMessage }: Props) {
+export function LoginForm({ successMessage, callbackUrl }: Props) {
   const [state, action, pending] = useActionState(loginAction, null)
 
   return (
@@ -20,6 +21,9 @@ export function LoginForm({ successMessage }: Props) {
         </div>
 
         <form action={action} className="space-y-4">
+          {callbackUrl && (
+            <input type="hidden" name="callbackUrl" value={callbackUrl} />
+          )}
           {successMessage && (
             <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700" role="status">
               {successMessage}

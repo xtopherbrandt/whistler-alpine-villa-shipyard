@@ -18,6 +18,9 @@ vi.mock('@/lib/db', () => ({
       delete: vi.fn(),
       deleteMany: vi.fn(),
     },
+    stay: {
+      updateMany: vi.fn(),
+    },
     session: {
       deleteMany: vi.fn(),
     },
@@ -129,6 +132,7 @@ describe('updateUserUnits — auto-remove isShareholder', () => {
     mockTransaction.mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db))
     vi.mocked(db.userUnit.deleteMany).mockResolvedValue({ count: 0 } as never)
     vi.mocked(db.userUnit.createMany).mockResolvedValue({ count: 0 } as never)
+    vi.mocked(db.stay.updateMany).mockResolvedValue({ count: 0 } as never)
     mockUserUpdate.mockResolvedValue({} as never)
   })
 

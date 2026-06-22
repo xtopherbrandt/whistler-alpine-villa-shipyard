@@ -3,6 +3,7 @@ import Credentials from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { refreshStaleToken } from '@/lib/auth/token-refresh'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,7 +47,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user?.id) {
         token.id = user.id
         token.isAdmin = user.isAdmin
@@ -54,8 +55,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.isShareholder = user.isShareholder
         token.isCaretaker = user.isCaretaker
         token.isActive = user.isActive
+        token.lastChecked = Date.now()
+        return token
       }
-      return token
+      return refreshStaleToken(token)
     },
     session({ session, token }) {
       session.user.id = token.id

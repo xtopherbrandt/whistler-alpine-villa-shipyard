@@ -33,9 +33,14 @@ export async function loginAction(
     return { data: null, error: 'Too many failed attempts. Try again in 15 minutes.' }
   }
 
-  // Determine redirect target based on role
+  const raw = formData.get('callbackUrl')
+  const rawCallback = typeof raw === 'string' ? raw : null
+  const isSafeRelative = (url: string) =>
+    typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')
+  const callbackUrl = rawCallback && isSafeRelative(rawCallback) ? rawCallback : null
+
   const user = await db.user.findUnique({ where: { email }, select: { isAdmin: true } })
-  const redirectTo = user?.isAdmin ? '/admin/users' : '/'
+  const redirectTo = callbackUrl ?? (user?.isAdmin ? '/admin/users' : '/')
 
   try {
     await signIn('credentials', { email, password, redirectTo })

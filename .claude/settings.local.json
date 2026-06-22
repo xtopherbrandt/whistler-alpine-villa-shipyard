@@ -16,7 +16,23 @@
       "Bash(mv:*)",
       "Bash(rm:*)",
       "Write",
-      "Edit"
+      "Edit",
+      "Bash(cat next.config.*)",
+      "Bash(grep -rn \"isShareholder\" src/types)",
+      "Bash(find . -path ./node_modules -prune -o -iname \"*.md\" -path \"*rules*\" -print)",
+      "Bash(ls .claude)",
+      "Bash(ls .claude/rules)",
+      "Bash(grep -n \"toUtcDate\" -r src/lib)",
+      "Bash(ls src/lib/utils)",
+      "Bash(ls src/lib)",
+      "Bash(head -40 src/lib/actions/stays.integration.test.ts)",
+      "Bash(ls e2e *)",
+      "Bash(cat vitest.integration.config.ts)",
+      "Skill(loop)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\xtoph\\\\.claude\\\\plugins\\\\data\\\\shipyard-acendas\\\\projects\\\\f51d2940fe8a\\\\sprints\\\\current\\\\.subagent-returns\")",
+      "Bash(cat)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(cd C:\\\\xtopher\\\\code\\\\whistler-alpine-villa-claude; $proc = Start-Process npm -ArgumentList \"run\",\"dev\" -NoNewWindow -PassThru -RedirectStandardOutput \"C:\\\\temp\\\\nextjs-stdout2.txt\" -RedirectStandardError \"C:\\\\temp\\\\nextjs-stderr2.txt\"; Start-Sleep -Seconds 10; Get-Content \"C:\\\\temp\\\\nextjs-stdout2.txt\" -ErrorAction SilentlyContinue; $r = try { Invoke-WebRequest -Uri \"http://localhost:3000/admin/users\" -MaximumRedirection 0 -ErrorAction Stop } catch { $_.Exception.Response }; if \\($r\\) { \"Status: $\\([int]$r.StatusCode\\)\"; $r.Headers['Location'] }; Start-Sleep -Seconds 2; Get-Content \"C:\\\\temp\\\\nextjs-stdout2.txt\" -ErrorAction SilentlyContinue 2>&1)"
     ],
     "deny": []
   }

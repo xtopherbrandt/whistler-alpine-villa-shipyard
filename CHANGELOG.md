@@ -1,5 +1,99 @@
 # Changelog
 
+## [Sprint 007] — 2026-06-22
+
+### Fixed
+
+- **B005** `runtime: 'nodejs'` moved from inside `export const config {}` to a top-level `export const runtime` — middleware now reliably runs on Node.js (not Edge) so Prisma role checks work
+- **B006** Integration test `afterEach` blocks now delete seeded `Unit` records (9801–9806) in FK order — no more orphaned unit fixtures in the dev database after test runs
+- **B007** Middleware redirect to `/login` now appends `?callbackUrl=<encoded-path>`; `loginAction` reads and validates the callback, redirecting the user to their intended destination after login (with `isSafeRelative` guard against open-redirect attacks)
+- **B008** `/stays` returning 307 resolved as a side-effect of B005 fix — unauthenticated redirects now correctly reach the Edge-safe middleware
+
+### Added
+
+- **F010 Shareholder & Admin Home** (`src/app/(app)/page.tsx`): role-aware landing page replacing the Next.js boilerplate
+  - Shareholders see their upcoming CONFIRMED stays (sorted by check-in, Pacific time), plus "Register a stay" CTA
+  - Directors (non-shareholders) see admin navigation with "Manage Users" link
+  - Caretaker-only users see "Occupancy schedule coming soon" placeholder until F011
+  - Director+shareholder dual-role → shareholder view wins per product spec
+
+### Tests
+
+- 3 new unit tests for `loginAction` callbackUrl handling (safe relative, absolute URL rejected, protocol-relative rejected)
+- 4 new E2E tests in `e2e/home.spec.ts` covering all role scenarios
+- Middleware test assertion updated to expect `?callbackUrl=` in redirect URL
+
+### Accessibility
+
+- `StayRow` date range separator uses `aria-hidden` + `sr-only "to"` text for screen readers
+- `DirectorHome` nav landmark has `aria-label="Administration"`
+
+## [Sprint 006] — 2026-06-20
+
+### Security
+
+- JWT role staleness fix: `refreshStaleToken` in `src/lib/auth/token-refresh.ts` revalidates roles from the database on each JWT callback, with 5-minute throttle to limit DB load — closes the sprint-005 review gap where revoked roles remained active until token expiry
+- Middleware role enforcement: `middleware.ts` now checks `req.auth.user.isShareholder` for `/stays/**` routes, blocking authenticated non-shareholders at the edge layer (defense-in-depth on top of page-level guards)
+- Admin and reset-password page guards now correctly distinguish unauthenticated users (→ `/login`) from authenticated non-admins (→ `/`)
+- `/stays` and `/stays/new` page guards aligned with middleware: authenticated non-shareholders redirect to `/` not `/login`
+- Server-side token validation on reset-password page: expired/used tokens show error immediately on load, not only after form submit
+
+### Added
+
+- `toUtcDate(dateStr)` shared utility at `src/lib/utils/dates.ts` — canonical UTC midnight date construction used by all stay and admin-user date fields
+- `runtime: 'nodejs'` in `middleware.ts` config — ensures Prisma calls are safe under Node.js runtime, not Edge
+
+### Process
+
+- `.claude/rules/project-components.md` — documents `useEffect`-for-navigation pattern: `router.push()` must live inside `useEffect`, never in the render body
+- `.claude/rules/project-dates.md` — documents UTC date parsing rule: use `toUtcDate(dateStr)` for all UTC midnight date constructions; never construct with `new Date(str + 'T00:00:00.000Z')` directly
+
+### Tests
+
+- Integration test (`src/lib/auth/token-refresh.integration.test.ts`) proving JWT callback + `refreshStaleToken` composition: role revocation reflected after DB update, throttle prevents redundant queries
+- E2E suites (auth, admin-users, invite) hardened: serial mode, `beforeAll` DB cleanup for shared state, UI-wait before DB assertions
+
+## [Sprint 005] — 2026-06-13
+
+### Added
+
+#### F006 — Check-In Registration
+
+- Stay and Vehicle Prisma models with migration (`Stay`, `Vehicle`, `StayStatus` enum, `@db.Date` date-only fields)
+- Server actions: `createStay`, `editStay`, `cancelStay`, `listStays`, `listUserUnits`, `getStay` — all shareholder-gated with unit ownership checks
+- Overlap detection via `$transaction(isolationLevel: 'Serializable')` — prevents double-booking per unit; allows same-day turnover
+- Guest delegation: optional `guestName` + `guestContact` fields; triggers email notifications to caretakers/directors via Resend on registration
+- Email failure is non-blocking — stay is registered, warning returned to client
+- Stay registration form (`/stays/new`) — date pickers, stay-type radio, vehicle entry (up to 2)
+- Stays list page (`/stays`) — shows all stays with status, type, dates; empty-state message; "Register a stay" link
+- Stay edit/cancel form (`/stays/{id}/edit`) — prefilled from DB; unitId immutable after registration; cancelled stays cannot be re-edited
+- Admin auto-cancel: removing a unit from a shareholder cancels their future confirmed stays (including same-day check-ins)
+- `parseVehicles` FormData utility for indexed vehicle field extraction
+- `GuestNotificationEmail` react-email component
+
+### Fixed
+
+- `checkInDate >= today` boundary in auto-cancel: corrected from `new Date()` (full datetime) to UTC midnight of today
+- `router.push()` moved from render body into `useEffect` in both form components (React rules compliance)
+
+### Tests
+
+- 6 integration tests across validation, authorization, overlap detection, success paths, and `editStay` edge cases
+- 8 E2E tests: registration, guest delegation, overlap block, same-day turnover, edit, cancel, no-unit redirect, empty-state text
+
+## [Sprint 004] — 2026-05-28
+
+### Added
+
+#### F005 — Dependency Vulnerability Management
+
+- GitHub Actions CI workflow (`.github/workflows/ci.yml`) with two jobs: unit tests (`npx vitest run`) and security audit (`npx audit-ci --high --skip-dev`) — triggers on push to `sprint/**` and `master`, and on PRs targeting `master`
+- `audit-ci` v7.1.0 installed as dev dependency; `.audit-ci.json` allowlist baseline (`{"high": true}`)
+- Dependabot configured for npm ecosystem (`.github/dependabot.yml`) — daily schedule, security updates, max 5 open PRs
+- Partially closes F004 Scenario 6: unit tests now run automatically on every sprint branch push
+
+> **Manual step required:** Enable Dependabot alerts + security updates in GitHub repo Settings → Security → Dependabot
+
 ## [Sprint 003] — 2026-05-27
 
 ### Changed

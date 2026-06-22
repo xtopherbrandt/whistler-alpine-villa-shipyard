@@ -49,6 +49,17 @@ model VerificationToken {
 }
 
 // Domain models
+
+enum StayType {
+  OWN
+  GUEST
+}
+
+enum StayStatus {
+  CONFIRMED
+  CANCELLED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String
@@ -69,6 +80,7 @@ model User {
   invitations    InvitationToken[]
   passwordResets PasswordResetToken[]
   loginAttempts  LoginAttempt[]
+  stays          Stay[]
 }
 
 model Unit {
@@ -77,6 +89,7 @@ model Unit {
   isCompanyHeld Boolean  @default(false)
 
   assignments UserUnit[]
+  stays       Stay[]
 }
 
 model UserUnit {
@@ -87,6 +100,32 @@ model UserUnit {
   unit Unit @relation(fields: [unitId], references: [id])
 
   @@id([userId, unitId])
+}
+
+model Stay {
+  id           String     @id @default(cuid())
+  unitId       Int
+  userId       String
+  stayType     StayType
+  status       StayStatus @default(CONFIRMED)
+  checkInDate  DateTime   @db.Date
+  checkOutDate DateTime   @db.Date
+  guestName    String?
+  guestContact String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  unit         Unit       @relation(fields: [unitId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+  vehicles     Vehicle[]
+}
+
+model Vehicle {
+  id           String @id @default(cuid())
+  stayId       String
+  licensePlate String
+  make         String
+  model        String
+  stay         Stay   @relation(fields: [stayId], references: [id], onDelete: Cascade)
 }
 
 model InvitationToken {

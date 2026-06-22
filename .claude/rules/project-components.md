@@ -31,3 +31,15 @@ Every component that fetches or receives async data must handle all 4 states:
 - No inline styles — Tailwind classes only
 - Server Components fetch their own data via `async`; don't thread data through layouts unless it's truly shared across routes
 - Client Components (`'use client'`) do not fetch data — they receive it as props or use SWR/React Query
+
+## Navigation After Server Actions
+
+Always call `router.push()` inside a `useEffect` that depends on the action state.
+Never call it directly in the render body — React forbids side effects during render,
+and under Strict Mode a render-body `router.push()` fires twice.
+
+```tsx
+useEffect(() => {
+  if (state?.data) router.push('/target')
+}, [state?.data, router])
+```

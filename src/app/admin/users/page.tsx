@@ -30,7 +30,8 @@ const STATUS_CLASSES = {
 
 export default async function AdminUsersPage() {
   const session = await auth()
-  if (!session?.user?.isAdmin) redirect('/')
+  if (!session) redirect('/login')
+  if (!session.user?.isAdmin) redirect('/')
 
   const users = await fetchUsers()
   const now = new Date()

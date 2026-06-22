@@ -9,7 +9,8 @@ interface Props {
 
 export default async function AdminEditUserPage({ params }: Props) {
   const [session, { id }] = await Promise.all([auth(), params])
-  if (!session?.user?.isAdmin) redirect('/')
+  if (!session) redirect('/login')
+  if (!session.user?.isAdmin) redirect('/')
 
   const user = await db.user.findUnique({
     where: { id },
